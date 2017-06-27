@@ -1,4 +1,4 @@
-%clear all
+clear all
 
 filePrefix = 'acqdata_';
 fileExtn = '.bin';
@@ -13,9 +13,9 @@ manualDarkSpecify = [];
 %manualDarkSpecify = [-9.726342e-05, -3.876065e-04, -5.243951e-04, -2.450550e-04]
 
 darkFilesSpecify = {}; % A list of timestrings that correspond to dark files
+interpolateDarks = false; %Interolate between dark files so bias changes over time
 
-
-skipRead = true; % If true, just restore the following binned file:
+skipRead = false; % If true, just restore the following binned file:
 restoreFileName = 'BinnedData_alfBoo_ALLFILES_20160319T015746-20160319T034741_binsize100';
 restoreFileName = 'BinnedData_alfBooGoodSet_20160319T032628-20160319T034741_binsize100';
 restoreFileName = 'BinnedData_alfHerGood_20160321T041027-20160321T044159_binsize100';
@@ -36,7 +36,7 @@ nSampScl = 1; % Reduce n by this factor to account for oversampling
 simpleNormalise = true; %For Histogram, just normalise such that max(ch) = 1
 useNullEst = false; %For Histogram, use an estimated peak to estimate null depth
 
-binSize = 100%100; % Bin together this number of samples (0 for no binning)       
+binSize = 100000%100; % Bin together this number of samples (0 for no binning)       
 
 binPeakEst = true; % Further bin estimates of peak (IPlus)
 peakEstBinSize = 100;
@@ -49,6 +49,7 @@ xr = [-inf, inf];
 %yr = [-1e-14, 10e-13]; 
 yr = [-10e-4, 20e-4];
 yr = [-20e-4, 100e-4];
+%yr = [-inf, inf];
 
 byr = yr;
 %byr = [-1e-3,1e-3]; %yrange for Binned data plots
@@ -185,11 +186,13 @@ excludeString = [];
 
 
 %%%%%%%%%%%%%%%% AAT July 2017 %%%%%%%%%%%%%%%%%
-filePath = '/Volumes/pendragon1/snert/GLINT/201706_AAT/data_Nuller/data201707_0207-0312/'
+%filePath = '/Volumes/pendragon1/snert/GLINT/201706_AAT/data_Nuller/data201707_0207-0312/'
+filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/data201707_0207-0312/'
 startTimeString1 = '20170608T020709';
 endTimeString1 = '20170608T031156';
-%endTimeString1 = '20170608T021447'; %Just first few files
-endTimeString1 = '20170608T020850'; %Just first 3 files
+% endTimeString1 = '20170608T021447'; %Just first few files
+%endTimeString1 = '20170608T021407'; %Just first files to dark
+% endTimeString1 = '20170608T022635'; %Just first 22 files
 
 darkFilesSpecify = {'20170608T020709', '20170608T021407', '20170608T022222' ...
     '20170608T023203', '20170608T023903', '20170608T024628', ...
@@ -198,6 +201,7 @@ darkFilesSpecify = {'20170608T020709', '20170608T021407', '20170608T022222' ...
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 saveDir = [filePath 'BinnedSaved/'];
 
@@ -222,9 +226,11 @@ nChans=4;
 allData = zeros(nChans, 0);
 allDataErrs = zeros(nChans, 0);
 allTimes = [];
+allElapsedTimes = [];
+allDarkElapsedTimes = [];
 allDarkData = zeros(nChans, 0);
 allDarkTimes = [];
-
+allDarkAbsTimes = []; %The absolute time (since start of data) of each dark file
 tic
 if ~skipRead
     clear ch0Av ch1Av ch2Av ch3Av ch0Averr ch1Averr ch2Averr ch3Averr
@@ -284,7 +290,7 @@ if ~skipRead
         
         if (curTimeNum >= startTimeNum) && (curTimeNum <= endTimeNum)
             
-            isDark(fCount) = darkFileStatus
+            isDark(fCount) = darkFileStatus;
             
             % Read this file and save its statistics
             filestring=[filePath curName];
@@ -336,6 +342,8 @@ if ~skipRead
                 timeNums(fCount) = curTimeNum;
                 
 
+                
+                rawTime = time;
                 if ~darkFileStatus
                     allData = [allData [ch0; ch1; ch2; ch3]];
                     allDataErrs = [allDataErrs [ch0err; ch1err; ch2err; ch3err]];
@@ -348,6 +356,16 @@ if ~skipRead
                         time = time + startTime;
                     end
                     allTimes = [allTimes time];
+                    
+                    % Also populate elapsed time in seconds
+                    if fCount == 1
+                        startTime = 0;
+                    else
+                        startTime = (timeNums(fCount) - timeNums(1))...
+                            *24*60*60; %Make it elapsed time in secs.
+                    end
+                    eltime = rawTime + startTime;
+                    allElapsedTimes = [allElapsedTimes eltime];
                 end
 
                 if darkFileStatus
@@ -363,6 +381,16 @@ if ~skipRead
                         newTimes = time;
                     end
                     allDarkTimes = [allDarkTimes newTimes];
+                    
+                    % Also populate elapsed time in seconds
+                    if fCount == 1
+                        startTime = 0;
+                    else
+                        startTime = (timeNums(fCount) - timeNums(1))...
+                            *24*60*60; %Make it elapsed time in secs.
+                    end
+                    eltime = rawTime + startTime;
+                    allDarkElapsedTimes = [allDarkElapsedTimes eltime];
                 end
                 
                 if darkFileStatus && plotDark
@@ -427,6 +455,7 @@ if ~skipRead
     end  
     disp(['Total num files: ' num2str(fCount-1)])
     
+    timeNumsE = (timeNums - timeNums(1))*24*60*60; %Make it elapsed time in secs.
     s1ix = find(isDark == false);
     s2ix = find(isDark == true);
     % Assumes set 2 is dark
@@ -434,8 +463,7 @@ if ~skipRead
     bias1 = mean(ch1Av(s2ix));
     bias2 = mean(ch2Av(s2ix));
     bias3 = mean(ch3Av(s2ix));
-    %bias = mean([bias0 bias1 bias2 bias3])
-     
+    
     if ~isempty(manualDarkSpecify) > 0
         disp('Using manually specified dark values!')
         bias0 = manualDarkSpecify(1);
@@ -444,29 +472,62 @@ if ~skipRead
         bias3 = manualDarkSpecify(4);
     end
     
+    
     if subtBias
+        if interpolateDarks
+            disp('Using interpolated Dark values...')
+            bias0Interp = interp1(timeNumsE(s2ix), ch0Av(s2ix), ...
+                allElapsedTimes,'spline','extrap');
+            bias1Interp = interp1(timeNumsE(s2ix), ch1Av(s2ix), ...
+                allElapsedTimes,'spline','extrap');
+            bias2Interp = interp1(timeNumsE(s2ix), ch2Av(s2ix), ...
+                allElapsedTimes,'spline','extrap');
+            bias3Interp = interp1(timeNumsE(s2ix), ch3Av(s2ix), ...
+                allElapsedTimes,'spline','extrap');
+            
+            bias0InterpDark = interp1(timeNumsE(s2ix), ch0Av(s2ix), ...
+                allDarkElapsedTimes,'spline','extrap');
+            bias1InterpDark = interp1(timeNumsE(s2ix), ch1Av(s2ix), ...
+                allDarkElapsedTimes,'spline','extrap');
+            bias2InterpDark = interp1(timeNumsE(s2ix), ch2Av(s2ix), ...
+                allDarkElapsedTimes,'spline','extrap');
+            bias3InterpDark = interp1(timeNumsE(s2ix), ch3Av(s2ix), ...
+                allDarkElapsedTimes,'spline','extrap');
+                     
+            allData(1,:) = allData(1,:) - bias0Interp;
+            allData(2,:) = allData(2,:) - bias1Interp;
+            allData(3,:) = allData(3,:) - bias2Interp;
+            allData(4,:) = allData(4,:) - bias3Interp; 
+
+            % Subtract bias from dark data?
+            allDarkData(1,:) = allDarkData(1,:) - bias0InterpDark;
+            allDarkData(2,:) = allDarkData(2,:) - bias1InterpDark;
+            allDarkData(3,:) = allDarkData(3,:) - bias2InterpDark;
+            allDarkData(4,:) = allDarkData(4,:) - bias3InterpDark;         
+        else            
+            allData(1,:) = allData(1,:) - bias0;
+            allData(2,:) = allData(2,:) - bias1;
+            allData(3,:) = allData(3,:) - bias2;
+            allData(4,:) = allData(4,:) - bias3; 
+
+            % Subtract bias from dark data?
+            allDarkData(1,:) = allDarkData(1,:) - bias0;
+            allDarkData(2,:) = allDarkData(2,:) - bias1;
+            allDarkData(3,:) = allDarkData(3,:) - bias2;
+            allDarkData(4,:) = allDarkData(4,:) - bias3;  
+        end       
+        % In either case, subtract a constant bias from the averages. These
+        % are only used for plotting, and it's useful to see the trend.
         ch0Av(s1ix) = ch0Av(s1ix) - bias0;
         ch1Av(s1ix) = ch1Av(s1ix) - bias1;
         ch2Av(s1ix) = ch2Av(s1ix) - bias2;
         ch3Av(s1ix) = ch3Av(s1ix) - bias3;
-        
-        % Subtract bias from dark data?
         ch0Av(s2ix) = ch0Av(s2ix) - bias0;
         ch1Av(s2ix) = ch1Av(s2ix) - bias1;
         ch2Av(s2ix) = ch2Av(s2ix) - bias2;
         ch3Av(s2ix) = ch3Av(s2ix) - bias3;
-        
-        allData(1,:) = allData(1,:) - bias0;
-        allData(2,:) = allData(2,:) - bias1;
-        allData(3,:) = allData(3,:) - bias2;
-        allData(4,:) = allData(4,:) - bias3; 
-        
-        % Subtract bias from dark data?
-        allDarkData(1,:) = allDarkData(1,:) - bias0;
-        allDarkData(2,:) = allDarkData(2,:) - bias1;
-        allDarkData(3,:) = allDarkData(3,:) - bias2;
-        allDarkData(4,:) = allDarkData(4,:) - bias3;  
     end
+    
 end
 toc
 
@@ -527,13 +588,17 @@ nullEstErr = abs(nullEst) .* sqrt( (allDataErrs(2,:)./allData(2,:)).^2 + ...
 
 
 % Plot file statistics
-figure(2)
+figure(32)
 clf()
 subplot(2,2,1)
 hold on
 %errorbar(timeNums,ch0Av,ch0Averr)
-errorbar(ch0Av(s1ix),ch0Averr(s1ix))
-errorbar(ch0Av(s2ix),ch0Averr(s2ix),'r')
+% errorbar(ch0Av(s1ix),ch0Averr(s1ix))
+% errorbar(ch0Av(s2ix),ch0Averr(s2ix),'r')
+errorbar(timeNumsE(s1ix), ch0Av(s1ix),ch0Averr(s1ix),'-x')
+errorbar(timeNumsE(s2ix), ch0Av(s2ix),ch0Averr(s2ix),'r-x')
+% Testing:
+%plot(allElapsedTimes,allData(1,:),'g')
 title('Channel 0')
 xlabel('File index (arb)')
 ylabel('Watts')
@@ -543,8 +608,15 @@ hold off
 subplot(2,2,2)
 hold on
 %errorbar(timeNums,ch1Av,ch1Averr)
-errorbar(ch1Av(s1ix),ch1Averr(s1ix))
-errorbar(ch1Av(s2ix),ch1Averr(s2ix),'r')
+% errorbar(ch1Av(s1ix),ch1Averr(s1ix))
+% errorbar(ch1Av(s2ix),ch1Averr(s2ix),'r')
+
+errorbar(timeNumsE(s1ix), ch1Av(s1ix),ch1Averr(s1ix),'-x')
+errorbar(timeNumsE(s2ix), ch1Av(s2ix),ch1Averr(s2ix),'r-x')
+% Testing:
+plot(allElapsedTimes,allData(2,:),'g')
+% plot(allElapsedTimes,bias1Interp-bias1,'m.')
+% plot(allDarkElapsedTimes,bias1InterpDark-bias1,'c.')
 title('Channel 1')
 xlabel('File index (arb)')
 ylabel('Watts')
@@ -554,8 +626,10 @@ hold off
 subplot(2,2,4)
 hold on
 %errorbar(timeNums,ch2Av,ch2Averr)
-errorbar(ch2Av(s1ix),ch2Averr(s1ix))
-errorbar(ch2Av(s2ix),ch2Averr(s2ix),'r')
+% errorbar(ch2Av(s1ix),ch2Averr(s1ix))
+% errorbar(ch2Av(s2ix),ch2Averr(s2ix),'r')
+errorbar(timeNumsE(s1ix), ch2Av(s1ix),ch2Averr(s1ix),'-x')
+errorbar(timeNumsE(s2ix), ch2Av(s2ix),ch2Averr(s2ix),'r-x')
 title('Channel 2')
 xlabel('File index (arb)')
 ylabel('Watts')
@@ -565,8 +639,10 @@ hold off
 subplot(2,2,3)
 hold on
 %errorbar(timeNums,ch3Av,ch3Averr)
-errorbar(ch3Av(s1ix),ch3Averr(s1ix))
-errorbar(ch3Av(s2ix),ch3Averr(s2ix),'r')
+% errorbar(ch3Av(s1ix),ch3Averr(s1ix))
+% errorbar(ch3Av(s2ix),ch3Averr(s2ix),'r')
+errorbar(timeNumsE(s1ix), ch3Av(s1ix),ch3Averr(s1ix),'-x')
+errorbar(timeNumsE(s2ix), ch3Av(s2ix),ch3Averr(s2ix),'r-x')
 title('Channel 3')
 xlabel('File index (arb)')
 ylabel('Watts')
@@ -768,9 +844,11 @@ if saveBinnedData && ~skipRead
         num2str(binSize) peakEstFileString '.mat'];
     disp(['Saving binned data to ' filename])
     save(filename, 'allTimes', 'allData', 'allDataErrs', 'bias0', 'bias1', 'bias2', 'bias3', ...
-        'ch0Av', 'ch1Av', 'ch2Av', 'ch3Av', 'ch0Averr', 'ch1Averr', 'ch2Averr', ...
-        'ch3Averr', 's1ix', 's2ix', 'peakEst', 'peakEstErr', 'nullEst', 'nullEstErr', 'measuredStats', ...
+        's1ix', 's2ix', 'peakEst', 'peakEstErr', 'nullEst', 'nullEstErr', 'measuredStats', ...
         'histEdgesSpecify');
+        % Removed 'ch0Av', 'ch1Av', 'ch2Av', 'ch3Av', 'ch0Averr', 'ch1Averr', 'ch2Averr', 'ch3Averr',
+        % since these aren't properly dark-subtracted when interpolation is
+        % used, so coudl be misleading.
 end
 
 
