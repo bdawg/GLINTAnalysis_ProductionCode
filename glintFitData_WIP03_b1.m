@@ -25,15 +25,13 @@ global nSamps nLoops histEdgesSpecify guessParams gpuMode
 
 
 % Basin hopping
-numHops = 1000;
+numHops = 1;
 hopSigmas = [0.1 1 0.01 0.1 1 0.01 0.01 0.01 0.01 0.01];
-hopSigmas = hopSigmas*10
-%hopSigmas = zeros(1,10);
 relStepSigma = 1; %finDiffRelStep scales as 10^N(0,relStepSigma);
 
 
 fitAll = false; % false to just fit the 5 free params
-performFit = true;
+performFit = false;
 fitUncertainties = false;
 ignoreErrors = false;
 
@@ -43,11 +41,11 @@ gpuMode = true; % Set to true to use GPU based MC function (WIP)
 nLoops=256;%16;%256
 nSamps = 2^16;
 nLoops=1;%16;%256
-nSamps = 2^16;
-%nSamps = 2^22;
-
-nLoops=32;
+%nSamps = 2^24;
 nSamps = 2^24;
+nLoops=64;
+% nSamps = 2^18;
+totsamps = nSamps * nLoops
 
 % Set up pdf measurement options
 histNBins = 100;
@@ -78,16 +76,13 @@ IrSig = 0.01;
 
 
 % Fiddling for Subaru May2017 data
-% deltaPhiMu = 0.3;
-% deltaPhiSig = 0.4*pi;
-% astroNull = 0.05;
-% IrMu = 1.;
-% IrSig = 0.8;
+deltaPhiMu = 0.3;
+deltaPhiSig = 0.4*pi;
+astroNull = 0.05;
+IrMu = 1.;
+IrSig = 0.8;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-totsamps = nSamps * nLoops;
-disp(['Total samps: ' num2str(totsamps, '%.2g')])
-
 load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats');
 measuredNullEst = nullEst;
 measuredNullEstErr = nullEstErr;
@@ -290,25 +285,25 @@ for curHop = 1:numHops
     if performFit
         
         tic
-        try
+%         try
             [fittedModelParams,fittedDParams,gof,stddev] = ...
                    fitChiSquare(binCents,measuredHistVals,modelFun,modelGuessParams, ...
                    dxData,measuredHistValsErr,fitOptions);
-        catch
-            % A bit of a kludge, but handle this by setting the
-            % allFailedIters flag (to mark results from this iter to be
-            % ignored later) and then setting results to 0.
-            disp('------ Fitting generated an exception, abandoning this iteration ------')
-            allFailedIters(curHop) = 1;   
-            fittedModelParams = zeros(size(modelGuessParams));
-            st = struct('du',0,'dl',0');
-            if fitAll
-                fittedDParams = [st st st st st st st st st st];
-            else
-                fittedDParams = [st st st st st];
-            end
-            gof = struct('chi2',0,'dof',0);
-        end
+%         catch
+%             % A bit of a kludge, but handle this by setting the
+%             % allFailedIters flag (to mark results from this iter to be
+%             % ignored later) and then setting results to 0.
+%             disp('------ Fitting generated an exception, abandoning this iteration ------')
+%             allFailedIters(curHop) = 1;   
+%             fittedModelParams = zeros(size(modelGuessParams));
+%             st = struct('du',0,'dl',0');
+%             if fitAll
+%                 fittedDParams = [st st st st st st st st st st];
+%             else
+%                 fittedDParams = [st st st st st];
+%             end
+%             gof = struct('chi2',0,'dof',0);
+%         end
         toc
 
         if fitAll
@@ -356,7 +351,7 @@ for curHop = 1:numHops
     %plot(binCents, newHistVals, 'ms')
     %errorbar(binCents, newHistVals, newHistValsErr,'m-s')
     
-    %axis([-0.2 1.2 0 2.5])
+    axis([-0.2 1.2 0 2.5])
     hold off
 
     allFittedCurves(curHop, :) = fittedCurve;

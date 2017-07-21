@@ -6,16 +6,21 @@ function [ result ] = glintMCFuncWrapper5p( params, xData )
 
 % This version only fits the 5 free params
 
-global nSamps nLoops histEdgesSpecify guessParams
+global nSamps nLoops histEdgesSpecify guessParams gpuMode
 
 modelParams = [params(1) params(2) guessParams(3) guessParams(4) ...
     params(3) params(4) guessParams(7) guessParams(8) ...
     guessParams(9) params(5)];
 
-[ outputPDF, outputPDFXs ] = glintMCFunc( nSamps, nLoops, histEdgesSpecify, ...
-    modelParams);
+if gpuMode
+    [ outputPDF, outputPDFXs ] = glintMCFunc_GPU( nSamps, nLoops, histEdgesSpecify, ...
+        modelParams);
+else
+    [ outputPDF, outputPDFXs ] = glintMCFunc( nSamps, nLoops, histEdgesSpecify, ...
+        modelParams);
+end
 
-result = outputPDF';
+result = double(outputPDF');
 
 end
 

@@ -13,7 +13,7 @@ manualDarkSpecify = [];
 %manualDarkSpecify = [-9.726342e-05, -3.876065e-04, -5.243951e-04, -2.450550e-04]
 
 darkFilesSpecify = {}; % A list of timestrings that correspond to dark files
-interpolateDarks = true; %Interolate between dark files so bias changes over time
+interpolateDarks = false; %Interpolate between dark files so bias changes over time
 
 skipRead = false; % If true, just restore the following binned file:
 restoreFileName = 'BinnedData_alfBoo_ALLFILES_20160319T015746-20160319T034741_binsize100';
@@ -33,13 +33,15 @@ nSampScl = 1; % Reduce n by this factor to account for oversampling
               % leave this at 1...
                
               
-simpleNormalise = true; %For Histogram, just normalise such that max(ch) = 1
-useNullEst = false; %For Histogram, use an estimated peak to estimate null depth
+simpleNormalise = false; %For Histogram, just normalise such that max(ch) = 1
+useNullEst = true; %For Histogram, use an estimated peak to estimate null depth
 
-binSize = 100%100; % Bin together this number of samples (0 for no binning)       
+binSize = 100;%100; % Bin together this number of samples (0 for no binning)       
 
 binPeakEst = true; % Further bin estimates of peak (IPlus)
 peakEstBinSize = 100;
+
+channelGains = [1, 1, 1, 1]; % Multiply each channel by this gain
 
 doDarkHists = true; % Also do the analysis for the dark data
 
@@ -66,7 +68,7 @@ histAxes = [-inf, inf];
 doHistErrors = false; %If false, use histcounts to do it quickly.
 plotDark = true; % Set to plot the signal in the dark files
 
-saveBinnedData = true;
+saveBinnedData = false;
 
 useCustomFilenameFormat = false;
 
@@ -162,7 +164,7 @@ excludeString = [];
 %excludeString = '20160323T002417'
 
 
-
+%%%%%%%%%%%%%%%% Subaru May 2017 %%%%%%%%%%%%%%%%%
 %%%%%% beta Peg 201705
 %%%yr = [-0.2e-3, 2e-3];
 % Final files (after last scan), LOWFS closed:
@@ -186,22 +188,33 @@ excludeString = [];
 
 
 
-%%%%%%%%%%%%%%%% AAT July 2017 %%%%%%%%%%%%%%%%%
-%filePath = '/Volumes/pendragon1/snert/GLINT/201706_AAT/data_Nuller/data201707_0207-0312/'
-filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/data201707_0207-0312/'
-startTimeString1 = '20170608T020709';
-endTimeString1 = '20170608T031156';
-% endTimeString1 = '20170608T021447'; %Just first few files
-%endTimeString1 = '20170608T021407'; %Just first files to dark
-% endTimeString1 = '20170608T022635'; %Just first 22 files
-
-darkFilesSpecify = {'20170608T020709', '20170608T021407', '20170608T022222' ...
-    '20170608T023203', '20170608T023903', '20170608T024628', ...
-    '20170608T025305', '20170608T025918', '20170608T030524', ...
-    '20170608T031156'};
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%% AAT July 2017 %%%%%%%%%%%%%%%%%
+% %filePath = '/Volumes/pendragon1/snert/GLINT/201706_AAT/data_Nuller/data201707_0207-0312/'
+% filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/data201707_0207-0312/';
+% startTimeString1 = '20170608T020709';
+% endTimeString1 = '20170608T031156';
+% % endTimeString1 = '20170608T021447'; %Just first few files
+% %endTimeString1 = '20170608T021407'; %Just first files to dark
+% %endTimeString1 = '20170608T022635'; %Just first 22 files
+% 
+% darkFilesSpecify = {'20170608T020709', '20170608T021407', '20170608T022222' ...
+%     '20170608T023203', '20170608T023903', '20170608T024628', ...
+%     '20170608T025305', '20170608T025918', '20170608T030524', ...
+%     '20170608T031156'};
+% 
+% %channelGains = [1, 1, -1, 1]; % Un-invert 3rd channel
+% 
+% %%%% Throughput / gain measurement files:
+% filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/caldata/current/';
+% startTimeString1 = '20170606T000000';
+% endTimeString1 = '20170610T000000';
+% darkFilesSpecify = {'20170609T023903', '20170609T024859'}; %1st one is 'both off'
+% darkFilesSpecify = {'20170609T023903'};
+% darkFilesSpecify = {}
+% yr = [-inf, inf];
+% %yr = [-10e-3, 80e-3];
+% byr = yr;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 saveDir = [filePath 'BinnedSaved/'];
@@ -300,16 +313,15 @@ if ~skipRead
             fid = fopen(filestring,'r');
             [data,count] = fread(fid,[5,inf],'double');
             fclose(fid);
-
+            
             
             if length(data) > binSize*2 % Skip 'empty' files
                 
                 time = data(1,:);
-                ch0 = data(2,:);
-                ch1 = data(3,:);
-                ch2 = data(4,:);
-                ch3 = data(5,:);     
-
+                ch0 = data(2,:) * channelGains(1);
+                ch1 = data(3,:) * channelGains(2);
+                ch2 = data(4,:) * channelGains(3);
+                ch3 = data(5,:) * channelGains(4);     
 
                 % Now bin raw data and store in main array
                 if binSize > 0
