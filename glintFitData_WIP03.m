@@ -16,7 +16,7 @@ dataDir = '/Users/bnorris/Don''t Backup/NullerDataTemp/BinnedSaved/';
 % dataFileName = 'BinnedData_20160814T224045-20160814T234820_binsize100_peakEstBinSize100'
 
 dataDir = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/BinnedSaved/';
-dataDir='';
+%dataDir='';
 dataFileName = 'BinnedData_20170531T051354-20170531T052604_binsize100_peakEstBinSize100';
 
 fitSaveFileName = 'fittedParams_wip';
@@ -46,8 +46,8 @@ nLoops=1;%16;%256
 nSamps = 2^16;
 %nSamps = 2^22;
 
-nLoops=32;
-nSamps = 2^24;
+% nLoops=32;
+% nSamps = 2^24;
 
 % Set up pdf measurement options
 histNBins = 100;

@@ -66,7 +66,7 @@ histAxes = [-0.2, 1.2];
 
 doHistErrors = false; %If false, use histcounts to do it quickly.
 plotDark = true; % Set to plot the signal in the dark files
-saveBinnedData = true;
+saveBinnedData = false;
 useCustomFilenameFormat = false;
 
 
@@ -215,7 +215,7 @@ endTimeString1 = '20170531T052604';
 
 
 saveDir = [filePath 'BinnedSaved/'];
-%saveDir = [filePath 'BinnedSavedTesting/'];
+saveDir = [filePath 'BinnedSavedTesting/'];
 
 formatIn = 'yyyymmddTHHMMSS';
 startTimeNum = datenum(startTimeString1,formatIn);
@@ -899,11 +899,11 @@ else
     axis([histAxes(1) histAxes(2) -inf inf]);
     subplot(3,2,5)
     plot(binCents,phot1PDFVals)
-    title('phot1 Histogram (scaled by mean peakEst)')
-    axis([histAxes(1) histAxes(2) -inf inf]);
+    title('deltaI Histogram')
+    axis([-1 1 -inf inf]);
     subplot(3,2,6)
     plot(binCents,phot2PDFVals)
-    title('phot2 Histogram (scaled by mean peakEst)')
+    title('totalI Histogram (scaled by mean peakEst)')
     axis([histAxes(1) histAxes(2) -inf inf]);
 %     subplot(3,2,5)
 %     plot(binCents,deltaIPDFVals)
@@ -947,8 +947,7 @@ if saveBinnedData && ~skipRead
     save(filename, 'allTimes', 'allData', 'allDataErrs', 'bias0', 'bias1', 'bias2', 'bias3', ...
         's1ix', 's2ix', 'peakEst', 'peakEstErr', 'nullEst', 'nullEstErr', 'measuredStats', ...
         'histEdgesSpecify', 'phot1DarkPDFVals', 'phot2DarkPDFVals', ...
-        'nullChanDarkPDFVals', 'brightChanDarkPDFVals', 'deltaIPDFVals', ...
-        'totalIPDFVals', 'phot1PDFVals', 'phot2PDFVals', 'binCents');
+        'nullChanDarkPDFVals', 'brightChanDarkPDFVals', 'deltaIPDFVals');
         % Removed 'ch0Av', 'ch1Av', 'ch2Av', 'ch3Av', 'ch0Averr', 'ch1Averr', 'ch2Averr', 'ch3Averr',
         % since these aren't properly dark-subtracted when interpolation is
         % used, so coudl be misleading.
