@@ -16,9 +16,8 @@ dataDir = '/Users/bnorris/Don''t Backup/NullerDataTemp/BinnedSaved/';
 % dataFileName = 'BinnedData_20160814T224045-20160814T234820_binsize100_peakEstBinSize100'
 
 dataDir = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/BinnedSaved/';
-%dataDir='';
 dataDir='..\GLINT_TestData\';
-dataFileName = 'BinnedData_20170531T051354-20170531T052604_binsize100_peakEstBinSize100_NSC';
+dataFileName = 'BinnedData_20170531T051354-20170531T052604_binsize100_peakEstBinSize100';
 
 fitSaveFileName = 'fittedParams_wip';
 
@@ -26,15 +25,15 @@ global nSamps nLoops histEdgesSpecify guessParams gpuMode
 
 
 % Basin hopping
-numHops = 1;
+numHops = 1000;
 hopSigmas = [0.1 1 0.01 0.1 1 0.01 0.01 0.01 0.01 0.01];
-hopSigmas = hopSigmas*10
-%hopSigmas = zeros(1,10);
+%hopSigmas = hopSigmas*10
+hopSigmas = zeros(1,10)
 relStepSigma = 1; %finDiffRelStep scales as 10^N(0,relStepSigma);
 
 
 fitAll = false; % false to just fit the 5 free params
-performFit = false;
+performFit = true;
 fitUncertainties = false;
 ignoreErrors = false;
 
@@ -44,14 +43,13 @@ gpuMode = true; % Set to true to use GPU based MC function (WIP)
 nLoops=256;%16;%256
 nSamps = 2^16;
 nLoops=1;%16;%256
-nSamps = 2^24;
+nSamps = 2^16;
 %nSamps = 2^22;
 
-% nLoops=32;
-% nSamps = 2^24;
+% nLoops=512;
+% nSamps = 2^25;
 
 % Set up pdf measurement options
-estimateHistErrors = false; % If true, use the Bernoulli RV method
 histNBins = 100;
 %histNBins = 1000;
 minXVal = -0.2;
@@ -91,10 +89,6 @@ totsamps = nSamps * nLoops;
 disp(['Total samps: ' num2str(totsamps, '%.2g')])
 
 load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats');
-
-load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats', ...
-    'binCents', );
-
 measuredNullEst = nullEst;
 measuredNullEstErr = nullEstErr;
 clear nullEst nullEstErr
@@ -132,60 +126,58 @@ end
 histBinSize = (maxXVal-minXVal)/(histNBins);
 histEdgesSpecify = minXVal:histBinSize:maxXVal;
 
-if estimateHistErrors
-    %%%%%%%%%%% MEASURED DATA UNCERTAINTIES %%%%%%%%%%
-    % This is tricky - see various tries in binTest.m. Maybe need to use kernel
-    % density estimate... We do want to use original errors, to
-    % account for more photon noise far from the null!
-    % FOR TESTING - Make up errors proportional to Poisson error
-    % errorScaling = 0.01;
-    % measuredHistValsErr = 1./sqrt(measuredHistVals) * errorScaling;
+% Measure the PDF of the measured data
+% [measuredHistVals, histBins, binInds]=histcounts(measuredNullEst,histEdgesSpecify, ...
+%     'Normalization', 'pdf');
+% binWidth = histBins(3) - histBins(2);
+% binCents = histBins(1:end-1)+binWidth/2;
 
-    % Approach: no. of observations in a bin is the sum of Bernoulli RVs where
-    % p_i (for each) is the proportion of the area under N(x_i, sigma_i) within
-    % the bin boundaries.
-    newHistVals = zeros(1,histNBins);
-    newHistValsSE = zeros(1,histNBins);
-    binWidth = histEdgesSpecify(3) - histEdgesSpecify(2);
-    binCents = histEdgesSpecify(1:end-1)+binWidth/2;
-    %for k =20:histNBins
-    for k =1:histNBins
-        ll = histEdgesSpecify(k);
-        ul = histEdgesSpecify(k+1);
-        newHistVals(k) = sum( (measuredNullEst >= ll) & (measuredNullEst < ul) );
+%%%%%%%%%%% MEASURED DATA UNCERTAINTIES %%%%%%%%%%
+% This is tricky - see various tries in binTest.m. Maybe need to use kernel
+% density estimate... We do want to use original errors, to
+% account for more photon noise far from the null!
+% FOR TESTING - Make up errors proportional to Poisson error
+% errorScaling = 0.01;
+% measuredHistValsErr = 1./sqrt(measuredHistVals) * errorScaling;
 
-        allCurPs = normcdf(ul,measuredNullEst,measuredNullEstErr) - ...
-            normcdf(ll,measuredNullEst,measuredNullEstErr);
-        newHistValsSE(k) = ( sum( allCurPs.*(1-allCurPs) ) )/ sqrt(newHistVals(k));
-
-
-    %     newHistVals(k) = sum(binornd(1, allCurPs));
-    %     newHistValsSE(k) = std(binornd(1, allCurPs));
-    end
-
-    %Undefined points should really have inf errors (i.e. have no effect)
-    newHistValsSE(isnan(newHistValsSE)) = inf;
-
-    % Normalise as PDF
-    PDFnormAmt = sum(newHistVals) * binWidth;
-    newHistVals = newHistVals / PDFnormAmt;
-    newHistValsErr = newHistValsSE / PDFnormAmt;
-
-    measuredHistVals = newHistVals;
-    measuredHistValsErr = newHistValsErr;
-
-    measuredHistValsErr(binCents >= errorScalingCutoff) = ...
-        measuredHistValsErr(binCents >= errorScalingCutoff)*errorScalingFactor;
-
-    %measuredHistValsErr(isinf(measuredHistValsErr)) = 1e24;
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-else
-    [measuredHistVals1, histBins, binInds]=histcounts(measuredNullEst,histEdgesSpecify, ...
-        'Normalization', 'pdf');
-    measuredHistValsErr1 = zeros(1, length(measuredHistVals));
-    binWidth = histBins(3) - histBins(2);
-    binCents1 = histBins(1:end-1)+binWidth/2;
+% Approach: no. of observations in a bin is the sum of Bernoulli RVs where
+% p_i (for each) is the proportion of the area under N(x_i, sigma_i) within
+% the bin boundaries.
+newHistVals = zeros(1,histNBins);
+newHistValsSE = zeros(1,histNBins);
+binWidth = histEdgesSpecify(3) - histEdgesSpecify(2);
+binCents = histEdgesSpecify(1:end-1)+binWidth/2;
+%for k =20:histNBins
+for k =1:histNBins
+    ll = histEdgesSpecify(k);
+    ul = histEdgesSpecify(k+1);
+    newHistVals(k) = sum( (measuredNullEst >= ll) & (measuredNullEst < ul) );
+    
+    allCurPs = normcdf(ul,measuredNullEst,measuredNullEstErr) - ...
+        normcdf(ll,measuredNullEst,measuredNullEstErr);
+    newHistValsSE(k) = ( sum( allCurPs.*(1-allCurPs) ) )/ sqrt(newHistVals(k));
+    
+    
+%     newHistVals(k) = sum(binornd(1, allCurPs));
+%     newHistValsSE(k) = std(binornd(1, allCurPs));
 end
+
+%Undefined points should really have inf errors (i.e. have no effect)
+newHistValsSE(isnan(newHistValsSE)) = inf;
+
+% Normalise as PDF
+PDFnormAmt = sum(newHistVals) * binWidth;
+newHistVals = newHistVals / PDFnormAmt;
+newHistValsErr = newHistValsSE / PDFnormAmt;
+
+measuredHistVals = newHistVals;
+measuredHistValsErr = newHistValsErr;
+
+measuredHistValsErr(binCents >= errorScalingCutoff) = ...
+    measuredHistValsErr(binCents >= errorScalingCutoff)*errorScalingFactor;
+
+%measuredHistValsErr(isinf(measuredHistValsErr)) = 1e24;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%% Do Fitting %%%%%%%%%%%%%%%%
@@ -268,9 +260,6 @@ for curHop = 1:numHops
     %clf()
     hold on
     errorbar(binCents, measuredHistVals, measuredHistValsErr,'r-x')
-    
-    errorbar(binCents1, measuredHistVals1, measuredHistValsErr1,'m-o')
-    
 
     % Call glintMCFunc to get a simulated distribution and overplot it
 %     dataParams = [deltaPhiMu, deltaPhiSig, deltaIMu, deltaISig, ...
