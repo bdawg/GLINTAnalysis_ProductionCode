@@ -1,61 +1,72 @@
-%clear all
+clear all
 dbstop if error
 
 addpath('/Users/bnorris/code/GLINT/fitChiSquare') %For the fitchisq code
 addpath('fitChiSquare') %For the fitchisq code
 
-%dataDir = './';
-dataDir = '/Users/bnorris/Don''t Backup/NullerDataTemp/BinnedSaved/';
-%dataFileName = 'BinnedData_alfBooGoodfiles_WithErrs_20160319T032628-20160319T034741_binsize100_peakEstBinSize100';
-%dataFileName = 'BinnedData_Labtest200nm_WithErrs_20150323T001134-20170323T001648_binsize100_peakEstBinSize100';
-%dataFileName = 'BinnedData_alfHer_WithErrs_20160321T041027-20160321T044159_binsize100_peakEstBinSize100';
-%dataFileName = 'BinnedData_alfLyn_WithErrs_20160318T235416-20160319T000216_binsize100_peakEstBinSize100';
-%dataFileName = 'BinnedData_Altair_WithErrs_20160320T055046-20160320T061028_binsize100_peakEstBinSize100';
 
-% dataDir = '/Volumes/silo4/snert/GLINT_Data/2016AugustSubaru/BinnedSaved/';
-% dataFileName = 'BinnedData_20160814T224045-20160814T234820_binsize100_peakEstBinSize100'
-
-dataDir = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/BinnedSaved/';
-%dataDir='';
 dataDir='..\GLINT_TestData\';
 dataFileName = 'BinnedData_20170531T051354-20170531T052604_binsize100_peakEstBinSize100_NSC';
 
-fitSaveFileName = 'fittedParams_wip';
 
-global nSamps nLoops histEdgesSpecify guessParams gpuMode
+fitSaveFileName = 'fittedParams_20170804a';
+
+
+global nSamps nLoops histEdgesSpecify guessParams gpuMode NSCPDFs
 
 
 % Basin hopping
-numHops = 1;
+numHops = 100;
 hopSigmas = [0.1 1 0.01 0.1 1 0.01 0.01 0.01 0.01 0.01];
-hopSigmas = hopSigmas*10
-%hopSigmas = zeros(1,10);
+% hopSigmas = hopSigmas*10
+hopSigmas = hopSigmas/2
+% hopSigmas = hopSigmas/5
+% hopSigmas = zeros(1,10)
 relStepSigma = 1; %finDiffRelStep scales as 10^N(0,relStepSigma);
 
 
 fitAll = false; % false to just fit the 5 free params
-performFit = false;
-fitUncertainties = false;
+performFit = true;
+fitUncertainties = true;
 ignoreErrors = false;
+figNum = 1
+
+histPlotYlim = [0, 5]; %For plotting
+
+% Use NSC? If false, use ASC.
+useNSC = true;
 
 gpuMode = true; % Set to true to use GPU based MC function (WIP)
 
 % MC options
 nLoops=256;%16;%256
 nSamps = 2^16;
-nLoops=1;%16;%256
-nSamps = 2^24;
-%nSamps = 2^22;
 
-% nLoops=32;
-% nSamps = 2^24;
+nLoops=128;
+nSamps = 2^24;
+
+nLoops=1;%8;%16;%256
+nSamps = 2^16;%2^24;
+
+nLoops=32;%128;
+nSamps = 2^24;
+
+% Restrict fitting to a smaller domain (e.g. to exclude long tail of zeros)
+restrictedFittingDomain = [];
+restrictedFittingDomain = [-1., 1.2];
+% restrictedFittingDomain = [-0.2, 1.2];
+restrictedFittingDomain = [-0.5, 2];
 
 % Set up pdf measurement options
-estimateHistErrors = false; % If true, use the Bernoulli RV method
-histNBins = 100;
-%histNBins = 1000;
-minXVal = -0.2;
+estimateHistErrors = true; % If true, use the Bernoulli RV method
+% histNBins = 100;
+% minXVal = -0.2;
+% maxXVal = 1.2;
+histNBins = 200;
+minXVal = -1.2;
 maxXVal = 1.2;
+% minXVal = -1.5;
+% maxXVal = 1.5;
 
 finDiffRelStep = 1e-2; %1e-2 seems to work well
 
@@ -85,19 +96,76 @@ IrSig = 0.01;
 % astroNull = 0.05;
 % IrMu = 1.;
 % IrSig = 0.8;
+deltaPhiMu = 0.3;
+deltaPhiSig = 0.3*pi;
+astroNull = 0.02;
+IrMu = 1.;
+IrSig = 0.01;
+% astroNull = 0.05;
+
+
+% Starting near (2 sig fig) best params from multi-hop fit
+deltaPhiMu = -1.566
+deltaPhiSig = -0.11006
+astroNull = -0.445
+IrMu = 0.96859
+IrSig = 0.0018867
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 totsamps = nSamps * nLoops;
 disp(['Total samps: ' num2str(totsamps, '%.2g')])
 
-load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats');
-
-load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats', ...
-    'binCents', );
+if useNSC
+    load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats', ...
+        'binCents', 'nullEstPDFVals', 'phot1DarkPDFVals', 'phot2DarkPDFVals', ...
+        'nullChanDarkPDFVals', 'brightChanDarkPDFVals', 'deltaIPDFVals', ...
+        'totalIPDFVals', 'phot1PDFVals', 'phot2PDFVals');
+    NSCPDFs = struct('binCents', binCents, 'nullEstPDFVals', nullEstPDFVals, ...
+        'phot1DarkPDFVals', phot1DarkPDFVals, 'phot2DarkPDFVals', phot2DarkPDFVals, ...
+        'nullChanDarkPDFVals', nullChanDarkPDFVals, ...
+        'brightChanDarkPDFVals', brightChanDarkPDFVals, ...
+        'deltaIPDFVals', deltaIPDFVals, 'totalIPDFVals', totalIPDFVals, ...
+        'phot1PDFVals', phot1PDFVals, 'phot2PDFVals', phot2PDFVals);
+else
+    load([dataDir dataFileName], 'nullEst', 'nullEstErr', 'measuredStats', ...
+        'binCents', 'nullEstPDFVals');
+    NSCPDFs = [];
+end
+nullEstBinCents = binCents;
+nullEstPDFValsErr = zeros(1,length(nullEstPDFVals));
 
 measuredNullEst = nullEst;
 measuredNullEstErr = nullEstErr;
 clear nullEst nullEstErr
+
+
+if ~isempty(restrictedFittingDomain)
+    if useNSC
+        NSCInds = (NSCPDFs.binCents > restrictedFittingDomain(1)) & ...
+            (NSCPDFs.binCents < restrictedFittingDomain(2));
+        NSCPDFs.binCents = NSCPDFs.binCents(NSCInds);
+        NSCPDFs.nullEstPDFVals = NSCPDFs.nullEstPDFVals(NSCInds);
+        NSCPDFs.phot1DarkPDFVals = NSCPDFs.phot1DarkPDFVals(NSCInds);
+        NSCPDFs.phot2DarkPDFVals = NSCPDFs.phot2DarkPDFVals(NSCInds);
+        NSCPDFs.nullChanDarkPDFVals = NSCPDFs.nullChanDarkPDFVals(NSCInds);
+        NSCPDFs.brightChanDarkPDFVals = NSCPDFs.brightChanDarkPDFVals(NSCInds);
+        NSCPDFs.deltaIPDFVals = NSCPDFs.deltaIPDFVals(NSCInds);
+        NSCPDFs.totalIPDFVals = NSCPDFs.totalIPDFVals(NSCInds);
+        NSCPDFs.phot1PDFVals = NSCPDFs.phot1PDFVals(NSCInds);
+        NSCPDFs.phot2PDFVals = NSCPDFs.phot2PDFVals(NSCInds);    
+        histNBins = length(NSCPDFs.binCents);
+        binWidth = NSCPDFs.binCents(2) - NSCPDFs.binCents(1);
+        minXVal = min(NSCPDFs.binCents)-binWidth/2;
+        maxXVal = max(NSCPDFs.binCents)+binWidth/2;
+    else
+        minXVal = restrictedFittingDomain(1);
+        maxXVal = restrictedFittingDomain(2);
+    end  
+end
+
+ 
+
 
 if gpuMode
     curMCFunc = @glintMCFunc_GPU;
@@ -131,6 +199,15 @@ end
 % Manually specify histogram bins
 histBinSize = (maxXVal-minXVal)/(histNBins);
 histEdgesSpecify = minXVal:histBinSize:maxXVal;
+binWidth = histEdgesSpecify(3) - histEdgesSpecify(2);
+binCents = histEdgesSpecify(1:end-1)+binWidth/2;
+% if useNSC && ~isequal(binCents,NSCPDFs.binCents)
+if useNSC && abs(mean(NSCPDFs.binCents - binCents)) > eps
+    disp('ERROR! When using NSC, the histogram sampling used here must be')
+    disp('the same as the NSC PDF sampling.')
+    return
+end
+    
 
 if estimateHistErrors
     %%%%%%%%%%% MEASURED DATA UNCERTAINTIES %%%%%%%%%%
@@ -174,17 +251,19 @@ if estimateHistErrors
     measuredHistVals = newHistVals;
     measuredHistValsErr = newHistValsErr;
 
-    measuredHistValsErr(binCents >= errorScalingCutoff) = ...
-        measuredHistValsErr(binCents >= errorScalingCutoff)*errorScalingFactor;
+    if errorScalingFactor ~= 1
+        measuredHistValsErr(binCents >= errorScalingCutoff) = ...
+            measuredHistValsErr(binCents >= errorScalingCutoff)*errorScalingFactor;
+    end
 
     %measuredHistValsErr(isinf(measuredHistValsErr)) = 1e24;
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 else
-    [measuredHistVals1, histBins, binInds]=histcounts(measuredNullEst,histEdgesSpecify, ...
+    [measuredHistVals, histBins, binInds]=histcounts(measuredNullEst,histEdgesSpecify, ...
         'Normalization', 'pdf');
-    measuredHistValsErr1 = zeros(1, length(measuredHistVals));
+    measuredHistValsErr = zeros(1, length(measuredHistVals));
     binWidth = histBins(3) - histBins(2);
-    binCents1 = histBins(1:end-1)+binWidth/2;
+    binCents = histBins(1:end-1)+binWidth/2;
 end
 
 
@@ -224,7 +303,7 @@ allFittedDStruct = struct();
 allFailedIters = zeros(numHops,1);
 allFittedCurves = zeros(numHops,histNBins);
 
-figure(1)
+figure(figNum)
 clf()
 overallTic = tic;
 
@@ -264,12 +343,13 @@ for curHop = 1:numHops
     
     
     % Plot data aand guess
-    figure(1)
+    figure(figNum)
     %clf()
     hold on
     errorbar(binCents, measuredHistVals, measuredHistValsErr,'r-x')
+    % Plot histogram saved from readData as a double-check:
+    %errorbar(nullEstBinCents, nullEstPDFVals, nullEstPDFValsErr,'c-+')
     
-    errorbar(binCents1, measuredHistVals1, measuredHistValsErr1,'m-o')
     
 
     % Call glintMCFunc to get a simulated distribution and overplot it
@@ -279,7 +359,7 @@ for curHop = 1:numHops
     [ MCoutputPDF, MCoutputPDFXs ] = curMCFunc( nSamps, nLoops, histEdgesSpecify, ...
         modelGuessParamsAll);
     toc
-    plot(MCoutputPDFXs, MCoutputPDF,'g')
+    plot(MCoutputPDFXs, MCoutputPDF,'m-x')
     %hold off
     
     
@@ -292,6 +372,7 @@ for curHop = 1:numHops
     fitOptions = optimset('Display','iter','FinDiffRelStep',finDiffRelStep);
     fitOptions.ErrorsUnknown = ignoreErrors;
     fitOptions.FitUncertainty = fitUncertainties;
+    fitOptions.MaxFunEvals = 200;
     %fitOptions.Scale = 1;
 
 
@@ -360,6 +441,7 @@ for curHop = 1:numHops
     tt = toc;
     profile off
     disp(['It took ' num2str(tt) ' seconds.'])
+    %%%plot(binCents, fittedCurve,'b-+')
     plot(binCents, fittedCurve,'b-+')
     % plot(binCents, residual+measuredHistVals,'g')
     legend('Measured', 'Guess', 'Fitted')
@@ -367,7 +449,7 @@ for curHop = 1:numHops
     %plot(binCents, newHistVals, 'ms')
     %errorbar(binCents, newHistVals, newHistValsErr,'m-s')
     
-    %axis([-0.2 1.2 0 2.5])
+    axis([-inf inf histPlotYlim(1) histPlotYlim(2)])
     hold off
 
     allFittedCurves(curHop, :) = fittedCurve;
@@ -395,6 +477,8 @@ for curHop = 1:numHops
         'binCents', 'measuredHistVals', 'measuredHistValsErr', ...
         'allFailedIters', 'fitSettings', 'histEdgesSpecify', 'binWidth', ...
         'allFittedCurves');
+    
+    disp(['Reduced chi2: ' num2str(allReducedChi2(curHop), '%5.3g')])
     
     avIterTime = toc(overallTic)/curHop;
     disp(['Average time per hop: ' num2str(avIterTime/60) ' minutes'])

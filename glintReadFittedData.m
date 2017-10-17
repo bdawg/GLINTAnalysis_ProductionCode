@@ -2,37 +2,36 @@ clear all
 
 set(0,'DefaultAxesColorOrder', hot)
 
-% dataDir = './fittedParamFiles/';
-% %inFileName = 'fittedParams_Vega_01062016_100hops.mat';
-% %inFileName = 'fittedParams_Labtest200nm_100Hops_01062016';
-% inFileName = 'fittedParams_alfBoo_29052016_100hops';
-% %inFileName = 'fittedParams_Labtest13_600nmWF_NoVibr_MaybeSat_runningcopy';
-% inFileName = 'fittedParams_alfHer_96hops';
-% inFileName = 'fittedParams_Labtest5_400nmWF_NoVibr'
-
-
-dataDir = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/fitted/'
-%inFileName = 'fittedParams_wip'
-inFileName = 'fittedParams_fit5_20170531T051354-20170531T052604_binsize100_peakEstBinSize100'
-inFileName = 'fittedParams_fitall_20170531T051354-20170531T052604_binsize100_peakEstBinSize100'
+dataDir = './';
+inFileName = 'fittedParams_wip'
 
 chisqCutoff = inf;
 %chisqCutoff = 10.3;
 
 plotBest = true; % Make a nice plot of the best fit model
-plotBestErrs = false; %Plot error bars in data for the best fit plot?
+plotBestErrs = true; %Plot error bars in data for the best fit plot?
 forceBestIter = []; %[22]; %18,22,49,83,96 Empty array to actually use best chisq iter
-showParamErrs = false;
+showParamErrs = true; %%true;
+annotFontSize = 12;%10; %12
+axisFontSize = 16;%12; %16
+anDimOffset = [0 0 0 0]; %[x y w h], added to default posn
+% anDimOffset = [0.045 0 0 0]
 
-iterRange = [1 1];
+% iterRange = [1 1];
 % iterRange = [1 45];
 iterRange = [1 100];
 %maxY = 3;
+ignoreEmptyIters = true;
+
+% When calculating param sd, ignore ones with chisq > this
+% Set to 0 to not ignore anything
+% chisqOutlierLimit = 2;
+chisqOutlierLimit = 0;
 
 paramSelect = [1 2 5 6 10];
 nullParamSelect = 10;
 
-useSavedModelVals = true;
+useSavedModelVals = true; % If true, settings below do nothing
 nLoops=16;
 nSamps = 2^16;
 nLoops=32;
@@ -60,6 +59,10 @@ hold off
 figure(2)
 clf()
 
+if ignoreEmptyIters
+    goodInds = find(allFittedParams(:,1) ~= 0);
+    iterRange = [1, max(goodInds)];
+end
 
 goodIters = [];
 allGoodParams = [];
@@ -117,6 +120,11 @@ hold on
 errorbar(binCents, measuredHistVals, measuredHistValsErr,'r-x')
 hold off
 
+figure(5)
+plot(allGoodChisq, 'm+')
+ylabel('chi^2');
+title('All chi^2 values');
+
 
 [bestChisq, bestIter] = min(allGoodChisq);
 
@@ -129,6 +137,16 @@ disp(['At iter ' num2str(bestIter)])
 % disp(['Max null found: ' num2str(max(allGoodParams(:,nullParamSelect))) ...
 %     ', Min: ' num2str(min(allGoodParams(:,nullParamSelect))) ...
 %     ', RMS: ' num2str(std(allGoodParams(:,nullParamSelect)))])
+disp('All params:')
+bestParams = allGoodParams(bestIter,:);
+disp(['deltaPhiMu = ' num2str(bestParams(1))])
+disp(['deltaPhiSig = ' num2str(bestParams(2))])
+disp(['astroNull = ' num2str(bestParams(10))])
+disp(['IrMu = ' num2str(bestParams(5))])
+disp(['IrSig = ' num2str(bestParams(6))])
+disp(' ')
+
+
 
 
 figure(3)
@@ -142,6 +160,17 @@ for l = 1:length(allGoodChisq)
 end
 hold off
 
+if chisqOutlierLimit > 0
+    notOutliers = find(allGoodChisq <= chisqOutlierLimit);
+    nonOutlierParams = allGoodParams(notOutliers,:);
+else
+    nonOutlierParams = allGoodParams;
+end
+statisticalErrs = std(nonOutlierParams, 0, 1);
+disp('Statistical errors for all params(ignoring outliers):')
+for k = 1:length(statisticalErrs)
+    disp(['Param ' num2str(k) ': ' num2str(statisticalErrs(k))])
+end
 
 if plotBest
     if ~isempty(forceBestIter)
@@ -164,13 +193,13 @@ if plotBest
     bestUL = allGoodParamsUL(plotBestIter,:);
     bestLL = allGoodParamsLL(plotBestIter,:);
     
-    plot(binCents, bestModelVals, 'b-');
+    plot(binCents, bestModelVals, 'b-', 'LineWidth', 1.5);
     
     xlabel('Null depth')
     ylabel('Normalised frequency')
     legend('Measured distribution', 'Model distribution');  
-    set(gca,'FontSize',16)
-    
+    set(gca,'FontSize',axisFontSize)
+    axis([-inf inf 0 inf])
     
     % Assemble text for annotation   
     %NB: guessParams = [deltaPhiMu, deltaPhiSig, deltaIMu, deltaISig, ...
@@ -205,9 +234,9 @@ if plotBest
         annotStr = {fHead, fl1, fl2, fl3, fl4, fl5, '', ...
             vHead, vl1, vl2, vl3, vl4, vl5};
 
-        anDim = [0.48 0. 0. 0.78];
+        anDim = [0.48 0. 0. 0.78] + anDimOffset;
         annotation('textbox', anDim, 'String', annotStr, 'FitBoxToText', 'on', ...
-            'FontSize', 12, 'Margin', 10)    
+            'FontSize', annotFontSize, 'Margin', 10)    
         
     else
         
@@ -228,7 +257,7 @@ if plotBest
         annotStr = {fHead, fl1, fl2, fl3, fl4, fl5, '', ...
             vHead, vl1, vl2, vl3, vl4, vl5};
 
-        anDim = [0.59 0. 0. 0.78];
+        anDim = [0.59 0. 0. 0.78] + anDimOffset;
         %anDim = [0.35 0. 0. 0.88]; %For alf Her plot
         %anDim = [0.65 0. 0. 0.82]; %For alf Lyn plot
         %anDim = [0.59 0. 0. 0.82]; %Higher

@@ -13,6 +13,10 @@ theta = 31.5; %mas diameter
 % B=3.2;
 % theta=20.95;
 
+theta = 14.5
+theta = 21.6
+theta = 27.6
+theta = 17
 
 thetaRad = theta/1000/60/60/360*2*pi;
 % N = ( (pi*B*thetaRad)/(4*lambda) )^2 * (1 - ((7*ldcoeff)/15)) * ...

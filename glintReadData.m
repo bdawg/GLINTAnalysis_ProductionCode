@@ -3,9 +3,6 @@ clear all
 filePrefix = 'acqdata_';
 fileExtn = '.bin';
 
-%filePath = '/data/';
-%filePath = '/Volumes/silo4/snert/GLINT_Data/data/201603_OnSkyData/';
-%filePath = '/Volumes/silo4/snert/GLINT_Data/2016AugustSubaru/';
 
 manualDarkSpecify = [];
 %manualDarkSpecify = [-9.726342e-05, -3.876065e-04, -5.243951e-04, -2.450550e-04]
@@ -15,13 +12,6 @@ interpolateDarks = false; %Interpolate between dark files so bias changes over t
 
 skipRead = false; % If true, just restore the following binned file:
 restoreFileName = 'BinnedData_alfBoo_ALLFILES_20160319T015746-20160319T034741_binsize100';
-restoreFileName = 'BinnedData_alfBooGoodSet_20160319T032628-20160319T034741_binsize100';
-restoreFileName = 'BinnedData_alfHerGood_20160321T041027-20160321T044159_binsize100';
-% restoreFileName = 'BinnedData_Vega10files_20160319T053011-20160319T053810_binsize100';
-%restoreFileName = 'BinnedData_alfOriAAT_20151130T023358-20151130T030113_binsize100';
-% restoreFileName = 'BinnedData_Vega_WithErrs_20160319T053011-20160319T053810_binsize100_peakEstBinSize100';
-restoreFileName = 'BinnedData_20170608T020709-20170608T031156_binsize100_peakEstBinSize100'
-
 
 gain = 1; % V/W. Set to 1 to keep units as Volts.
 subtBias = true;
@@ -37,20 +27,23 @@ useNullEst = true; %For Histogram, use an estimated peak to estimate null depth
 
 binSize = 100;%100; % Bin together this number of samples (0 for no binning)       
 
+% How to get the peak-estimate (i.e. N+):
+% 1 - Only use  phot channels, i.e. peakEst = phot1 + phot2 +2*sqrt(phot1.*phot2);
+% 2 - Directly use the anti-null channel (DOESN'T WORK....???)
+peakEstMode = 1; 
+
 binPeakEst = true; % Further bin estimates of peak (IPlus)
-peakEstBinSize = 100;
+peakEstBinSize = 100;%100;
 
 channelGains = [1, 1, 1, 1]; % Multiply each channel by this gain
-
+swapChs23 = false; %Set to true to swap teh null and anti-null channel
 doDarkHists = true; % Also do the analysis for the dark data
 
 
 xr = [-inf, inf];
-%xr = [0, 1.0];
-%yr = [-1e-14, 10e-13]; 
-yr = [-10e-4, 20e-4];
-yr = [-20e-4, 100e-4];
-%yr = [-0.1e-3, 6e-3];
+xr = [0, 1.0];
+
+yr = [-1e-3, 4e-3];
 %yr = [-inf, inf];
 
 byr = yr;
@@ -61,161 +54,38 @@ histNBins=200; %Number of bins for the histogram
 minXVal = -1.2;
 %minXVal = -0.2;
 maxXVal = 1.2;
-%histAxes = [0, 0.2];
 histAxes = [-0.2, 1.2];
+
+
 
 doHistErrors = false; %If false, use histcounts to do it quickly.
 plotDark = true; % Set to plot the signal in the dark files
-saveBinnedData = true;
 useCustomFilenameFormat = false;
 
+saveBinnedData = true;
+specialFName = '';
+% specialFName = '_maxHist5'
 
 excludeString = [];
 
 %%% Data set:
-startTimeString1 = '20160318T235416';
-endTimeString1 = '20160319T000216';
 
-%%% AAT Nov2015 - gam Ret
-startTimeString1 = '20151129T234519';
-%endTimeString1 = '20151129T234642'; %Just first 3 files
-endTimeString1 = '20151130T004638';
-
-%%% AAT Nov2015 - alf Ori
-startTimeString1 = '20151130T023358';
-endTimeString1 = '20151130T030113';
-
-
-filePath = '/Volumes/BN_DATA_OSX/NullerData/201603_OnSkyData/';
-% % alf Lyn - first set, while RMs etc.
-% startTimeString1 = '20160318T231025';
-% endTimeString1 = '20160318T233228';
-% %%%endTimeString1 = '20160318T231400'; 
-% 
-% % alf Lyn - second set, shoudl be ok (10 files).
-startTimeString1 = '20160318T235416';
-endTimeString1 = '20160319T000216';
-
-% alf Boo, latter set, best conditions (31 files)
-startTimeString1 = '20160319T032628';
-endTimeString1 = '20160319T034741';
-%yr = [-8e-4, 150e-4];
-% %startTimeString1 = '20160319T015746'; % ALL alf Boo data, lost of RM, loop open, etc.
-
-% % Vega, 10 files
-% startTimeString1 = '20160319T053011';
-% endTimeString1 = '20160319T053810';
-
-% % eps Leo - all files, log says this is all no good
-% %startTimeString1 = '20160318T203134';
-% startTimeString1 = '20160318T205307'; %Starts after lab null position used
-% endTimeString1 = '20160318T211216';
-
-% %alf Her, good files (45 files)
-% startTimeString1 = '20160321T041027';
-% %%startTimeString1 = '20160321T043000';
-% endTimeString1 = '20160321T044159';
-% % yr = [-8e-4, 200e-4];
-
-% % Altair, end of Defrere night, bad seeing.
-% startTimeString1 = '20160320T055046';
-% endTimeString1 = '20160320T061028';
-
-
-
-% useCustomFilenameFormat = true;
-% customIDString = 'labMeas09';
-% customPrefixLength = 18;
-% startTimeString1 = '20150320T221105';
-% endTimeString1 = '20170320T221453';
-% yr = [-1e-3, 10];
-% % startTimeString1 = '20160320T222441';
-% % endTimeString1 = '20160320T222611';
-
-% %filePath = '/Volumes/BN_DATA/NullerData/20160322_Labtests/';
-% filePath = '/Volumes/silo4/snert/GLINT_Data/data/20160322_Labtests/';
-% useCustomFilenameFormat = true;
-% customIDString = 'acqdataLab5';
-% customPrefixLength = 12;
-% startTimeString1 = '20150323T001134';
-% endTimeString1 = '20170323T001648';
-% yr = [0., 8.];
-% byr = yr;
-
-% useCustomFilenameFormat = true;
-% customIDString = '2000';
-% customPrefixLength = 22;
-% startTimeString1 = '20160316T165951';
-% endTimeString1 = '20160316T170522';
-% yr = [0., 0.1];
-
-
-
-% %%%%%%%%%%%%%%%% August 2016 %%%%%%%%%%%%%%%%%
-% 
-% % Vega 20160814
-% startTimeString1 = '20160814T224045';
-% %endTimeString1 = '20160814T230100'; %First few files
-% endTimeString1 = '20160814T234820';
-% 
-% excludeString = [];
-% %excludeString = '20160323T002417'
-
-
-%%%%%%%%%%%%%%%% Subaru May 2017 %%%%%%%%%%%%%%%%%
-filePath = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/';
-%%%%%% beta Peg 201705
-%%%yr = [-0.2e-3, 2e-3];
-% Final files (after last scan), LOWFS closed:
-startTimeString1 = '20170531T051354';
-endTimeString1 = '20170531T052933';
-
-% Fewer from final set:
-endTimeString1 = '20170531T052604';
-
-% Files after 2nd-last scan (still supposedly LOWFS closed)
-% startTimeString1 = '20170531T045908';
-% endTimeString1 = '20170531T051354';
-
-
-% % Files before LOWFS closed (but at null):
-% startTimeString1 = '20170531T044617';
-% endTimeString1 = '20170531T045111';
-
-
-
-
-% %%%%%%%%%%%%%%% AAT July 2017 %%%%%%%%%%%%%%%%%
-% %filePath = '/Volumes/pendragon1/snert/GLINT/201706_AAT/data_Nuller/data201707_0207-0312/'
-% filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/data201707_0207-0312/';
-% startTimeString1 = '20170608T020709';
-% endTimeString1 = '20170608T031156';
-% % endTimeString1 = '20170608T021447'; %Just first few files
-% %endTimeString1 = '20170608T021407'; %Just first files to dark
-% %endTimeString1 = '20170608T022635'; %Just first 22 files
-% 
-% darkFilesSpecify = {'20170608T020709', '20170608T021407', '20170608T022222' ...
-%     '20170608T023203', '20170608T023903', '20170608T024628', ...
-%     '20170608T025305', '20170608T025918', '20170608T030524', ...
-%     '20170608T031156'};
-% 
-% %channelGains = [1, 1, -1, 1]; % Un-invert 3rd channel
-% 
-% %%%% Throughput / gain measurement files:
-% filePath = '/Users/bnorris/DontBackup/GLINTdata/201706AAT_Subset/caldata/current/';
-% startTimeString1 = '20170606T000000';
-% endTimeString1 = '20170610T000000';
-% darkFilesSpecify = {'20170609T023903', '20170609T024859'}; %1st one is 'both off'
-% darkFilesSpecify = {'20170609T023903'};
-% darkFilesSpecify = {}
-% yr = [-inf, inf];
-% %yr = [-10e-3, 80e-3];
-% byr = yr;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%% Subaru August 2016 %%%%%%%%%%%%%%%%%
+filePath = '/Volumes/pendragon1/snert/tempFromRDN/GLINT_201608_Subaru/'
+% Vega 20160812
+startTimeString1 = '20160812T221833';
+endTimeString1 = '20160812T225417'; %Everything
+% startTimeString1 = '20160812T221914'; %Nice subset
+% endTimeString1 = '20160812T223026'; %Nice subset
 
 
 saveDir = [filePath 'BinnedSaved/'];
-%saveDir = [filePath 'BinnedSavedTesting/'];
+saveDir = '../GLINT_BinnedSaved/';
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 
 formatIn = 'yyyymmddTHHMMSS';
 startTimeNum = datenum(startTimeString1,formatIn);
@@ -315,6 +185,10 @@ if ~skipRead
             [data,count] = fread(fid,[5,inf],'double');
             fclose(fid);
             
+            if swapChs23
+                disp('WARNING - swapping null and anti-null channels')
+                data = data([1 2 4 3 5], :);
+            end
             
             if length(data) > binSize*2 % Skip 'empty' files
                 
@@ -557,11 +431,22 @@ end
 % (This should be the same as ch2, but maybe less noisy ?)
 ch1ToNullRatio = 1.2561;
 ch4ToNullRatio = 0.9148;
+averagenullAntinull = 0.9257;
 phot1 = allData(1,:)/ch1ToNullRatio;
-phot1(phot1 <= 0) = 1e-14; %This is actually problematic, since can be negative from noise
+phot1GT0 = phot1;
+phot1GT0(phot1GT0 <= 0) = 1e-14; %This is actually problematic, since can be negative from noise
 phot2 = allData(4,:)/ch4ToNullRatio;
-phot2(phot2 <= 0) = 1e-14; %This is actually problematic, since can be negative from noise
-peakEst = phot1 + phot2 +2*sqrt(phot1.*phot2); %This assumes deltaPhi=0!!
+phot2GT0 = phot2;
+phot2GT0(phot2GT0 <= 0) = 1e-14; %This is actually problematic, since can be negative from noise
+switch peakEstMode
+    case 1       
+        peakEst = phot1GT0 + phot2GT0 +2*sqrt(phot1GT0.*phot2GT0); %This assumes deltaPhi=0!!
+    case 2
+        peakEst = allData(3,:) * averagenullAntinull;
+    otherwise
+        disp('ERROR: Invalid peakEstMode specified.')
+        return
+end
 
 
 % Try binning peakEst more (it is just an estimate...)
@@ -757,6 +642,7 @@ if ~doHistErrors
         'Normalization', 'pdf');
     binWidth = histBins(3) - histBins(2);
     binCents = histBins(1:end-1)+binWidth/2;
+    nullEstPDFVals = histVals;
     [dummy, maxInd] = max(histVals);
     disp(['Mode: ' num2str(histBins(maxInd))])
     plot(binCents, histVals)
@@ -791,10 +677,10 @@ if doDarkHists && ~skipRead
     %phot2Dark(phot2Dark <= 0) = 0; %This is actually problematic, since can be negative from noise
     peakEstDark = phot1Dark + phot2Dark; %No sqrt since incoherent
     %peakEstDark = phot1Dark + phot2Dark+2*sqrt(phot1Dark.*phot2Dark);
-    
+   
+    dkScaleFactor = mean(peakEst); %Normalise dark counts
     if binPeakEst
         peakEstDarkOrig = peakEstDark;
-        dkScaleFactor = mean(peakEst); %Normalise dark counts
         
         try
             npts = length(peakEstDark);
@@ -847,7 +733,7 @@ deltaIdist = (phot1 - phot2) ./ (phot1 + phot2);
 disp(' ')
 disp(['DeltaI mu: ' num2str(mean(deltaIdist))])
 disp(['DeltaI sig: ' num2str(std(deltaIdist))])
-% totalI is scaled by skScaleFactor to put in same units as nullEst, etc.
+% totalI is scaled by dkScaleFactor to put in same units as nullEst, etc.
 % This is all fine as long as it's consistently reproduced in MC model.
 totalIdist = (phot1 + phot2) / dkScaleFactor;
 
@@ -941,12 +827,18 @@ if saveBinnedData && ~skipRead
     else
         interpString = '';
     end
+    if peakEstMode == 2
+        peakEstModeStr = '_peakest2';
+    else
+        peakEstModeStr = '';
+    end
     filename = [saveDir 'BinnedData_' startTimeString1 '-' endTimeString1 '_binsize' ...
-        num2str(binSize) peakEstFileString interpString NSCFileString '.mat'];
+        num2str(binSize) peakEstFileString interpString NSCFileString ...
+        peakEstModeStr specialFName '.mat'];
     disp(['Saving binned data to ' filename])
     save(filename, 'allTimes', 'allData', 'allDataErrs', 'bias0', 'bias1', 'bias2', 'bias3', ...
         's1ix', 's2ix', 'peakEst', 'peakEstErr', 'nullEst', 'nullEstErr', 'measuredStats', ...
-        'histEdgesSpecify', 'phot1DarkPDFVals', 'phot2DarkPDFVals', ...
+        'histEdgesSpecify', 'nullEstPDFVals', 'phot1DarkPDFVals', 'phot2DarkPDFVals', ...
         'nullChanDarkPDFVals', 'brightChanDarkPDFVals', 'deltaIPDFVals', ...
         'totalIPDFVals', 'phot1PDFVals', 'phot2PDFVals', 'binCents');
         % Removed 'ch0Av', 'ch1Av', 'ch2Av', 'ch3Av', 'ch0Averr', 'ch1Averr', 'ch2Averr', 'ch3Averr',
