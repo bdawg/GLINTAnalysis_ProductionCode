@@ -12,6 +12,11 @@ modelParams = [params(1) params(2) guessParams(3) guessParams(4) ...
     params(3) params(4) guessParams(7) guessParams(8) ...
     guessParams(9) params(5)];
 
+% Testing:
+% modelParams(5) = 1.;
+% modelParams(6) = 0.;
+
+
 if gpuMode
     [ outputPDF, outputPDFXs ] = glintMCFunc_GPU( nSamps, nLoops, histEdgesSpecify, ...
         modelParams);

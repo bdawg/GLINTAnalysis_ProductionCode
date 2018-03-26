@@ -4,17 +4,49 @@ dbstop if error
 addpath('/Users/bnorris/code/GLINT/fitChiSquare') %For the fitchisq code
 addpath('fitChiSquare') %For the fitchisq code
 
-dataDir='..\GLINT_BinnedSaved\2017DecLabTests\';
-dataFileName = 'BinnedData_20171211T152646-20171211T153059_binsize100_peakEstBinSize100_NSC_peakest2'
-dataFileName = 'BinnedData_20171212T165556-20171212T170301_binsize100_peakEstBinSize100_NSC'
-fitSaveFileName = 'fittedParams_tmp';
-% fitSaveFileName = 'fittedParams_lab20603-4-200nm_200bins';
+%dataDir = './';
+% dataDir = '/Users/bnorris/Don''t Backup/NullerDataTemp/BinnedSaved/';
+%dataFileName = 'BinnedData_alfBooGoodfiles_WithErrs_20160319T032628-20160319T034741_binsize100_peakEstBinSize100';
+%dataFileName = 'BinnedData_Labtest200nm_WithErrs_20150323T001134-20170323T001648_binsize100_peakEstBinSize100';
+%dataFileName = 'BinnedData_alfHer_WithErrs_20160321T041027-20160321T044159_binsize100_peakEstBinSize100';
+%dataFileName = 'BinnedData_alfLyn_WithErrs_20160318T235416-20160319T000216_binsize100_peakEstBinSize100';
+%dataFileName = 'BinnedData_Altair_WithErrs_20160320T055046-20160320T061028_binsize100_peakEstBinSize100';
+
+% dataDir = '/Volumes/silo4/snert/GLINT_Data/2016AugustSubaru/BinnedSaved/';
+% dataFileName = 'BinnedData_20160814T224045-20160814T234820_binsize100_peakEstBinSize100'
+
+% dataDir = '/Users/bnorris/DontBackup/GLINTdata/20170531_Subaru/BinnedSaved/';
+%dataDir='';
+dataDir='..\GLINT_TestData\';
+dataFileName = 'BinnedData_20170531T051354-20170531T052604_binsize100_peakEstBinSize100_NSC';
+dataFileName = 'BinnedData_20160319T032628-20160319T034741_binsize100_peakEstBinSize100_NSC';
+% dataFileName = 'BinnedData_20160319T032628-20160319T034741_binsize100_NSC';
+
+dataDir='..\GLINT_BinnedSaved\';
+% dataDir='..\GLINT_BinnedSaved\2017May-BinnedSaved\';
+% dataFileName = 'BinnedData_20160319T032628-20160319T034741_binsize100_peakEstBinSize100_NSC_maxHist5'
+% dataFileName = 'BinnedData_20160319T032628-20160319T034741_binsize100_peakEstBinSize100_NSC'
+% dataFileName = 'BinnedData_20160319T032628-20160319T034741_binsize100_NSC'
+dataFileName = 'BinnedData_alfBoo-SubMar2016_fixedPhotGT0_20160319T032628-20160319T034741_binsize100_NSC_peakest2';
+dataFileName = 'BinnedData_alfBoo-SubMar2016_20160319T032628-20160319T034741_binsize100_peakEstBinSize100_NSC';
+
+dataFileName = 'BinnedData_betPeg-SubMay2017-bestfewfiles_20170531T051354-20170531T052604_binsize100_peakEstBinSize100_NSC';
+% dataFileName = 'BinnedData_betPeg-SubMay2017-bestfewfiles_20170531T051354-20170531T052604_binsize100_NSC_peakest2'
+
+dataFileName = 'BinnedData_20160815T021820-20160815T022026_binsize100_peakEstBinSize100_NSC';
+
+fitSaveFileName = 'fittedParams_wip_test';
+
+% dataFileName = 'BinnedData_omiCet_subset1_SubNov2016_20161109T022345-20161109T023622_binsize100_peakEstBinSize100_NSC'
+% fitSaveFileName = 'fittedParams_wip99';
+%fitSaveFileName = 'fittedParams_20170804a';
+
 
 global nSamps nLoops histEdgesSpecify guessParams gpuMode NSCPDFs
 
 
 % Basin hopping
-numHops = 1;
+numHops = 1;%100;
 hopSigmas = [0.1 1 0.01 0.1 1 0.01 0.01 0.01 0.01 0.01];
 % hopSigmas = hopSigmas*10
 hopSigmas = hopSigmas/2
@@ -24,12 +56,12 @@ relStepSigma = 1; %finDiffRelStep scales as 10^N(0,relStepSigma);
 
 
 fitAll = false; % false to just fit the 5 free params
-performFit = false;
+performFit = true;
 fitUncertainties = false;
 ignoreErrors = false;
 figNum = 1
 
-histPlotYlim = [0, 10]; %For plotting
+histPlotYlim = [0, 5]; %For plotting
 
 % Use NSC? If false, use ASC.
 useNSC = true;
@@ -46,22 +78,14 @@ nSamps = 2^24;
 nLoops=1;%8;%16;%256
 nSamps = 2^16;%2^24;
 
-nLoops=128;
-nSamps = 2^24;
-% nLoops=32;%128;
-% nSamps = 2^24;
-nLoops=1;%128;
+nLoops=32;%128;
 nSamps = 2^24;
 
 % Restrict fitting to a smaller domain (e.g. to exclude long tail of zeros)
 restrictedFittingDomain = [];
-% restrictedFittingDomain = [-1., 1.2];
+restrictedFittingDomain = [-1., 1.2];
 restrictedFittingDomain = [-0.2, 1.2];
 % restrictedFittingDomain = [-0.5, 2];
-
-% Only use a sub-range of samples
-sampleRange = [];
-% sampleRange = [1, 1e5]
 
 % Set up pdf measurement options
 estimateHistErrors = true; % If true, use the Bernoulli RV method
@@ -81,8 +105,7 @@ finDiffRelStep = 1e-2; %1e-2 seems to work well
 % correlation between phi and I) are worse at high values.
 errorScalingCutoff = 0.2;
 errorScalingFactor = 1;
-% errorScalingCutoff = -100;
-% errorScalingFactor = 10;
+
 
 % Specify Guess parameters
 deltaPhiMu = 0.3;
@@ -98,11 +121,11 @@ IrSig = 0.01;
 
 
 % Fiddling for Subaru May2017 data
-deltaPhiMu = 0.3;
-deltaPhiSig = 0.4*pi;
-astroNull = 0.05;
-IrMu = 1.;
-IrSig = 0.8;
+% deltaPhiMu = 0.3;
+% deltaPhiSig = 0.4*pi;
+% astroNull = 0.05;
+% IrMu = 1.;
+% IrSig = 0.8;
 deltaPhiMu = 0.3;
 deltaPhiSig = 0.3*pi;
 astroNull = 0.02;
@@ -111,28 +134,14 @@ IrSig = 0.01;
 % astroNull = 0.05;
 
 
-% Starting near (2 sig fig) best params from multi-hop fit
+% % Starting near (2 sig fig) best params from multi-hop fit
 % deltaPhiMu = -1.566
 % deltaPhiSig = -0.11006
 % astroNull = -0.445
 % IrMu = 0.96859
 % IrSig = 0.0018867
 
-% Generic
-deltaPhiMu = 0;
-deltaPhiSig = 0;
-astroNull = 0;
-IrMu = 1;
-IrSig = 0;
 
-deltaPhiMu = 0.1;
-deltaPhiSig = 1;
-astroNull = 0.01;
-% IrMu = 0.9;
-% IrSig = 0.1;
-
-% astroNull = 0.1; % Good for polychromatic
-% deltaPhiSig = 0.4
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 totsamps = nSamps * nLoops;
 disp(['Total samps: ' num2str(totsamps, '%.2g')])
@@ -156,13 +165,8 @@ end
 nullEstBinCents = binCents;
 nullEstPDFValsErr = zeros(1,length(nullEstPDFVals));
 
-if ~isempty(sampleRange)
-    measuredNullEst = nullEst(sampleRange(1):sampleRange(2));
-    measuredNullEstErr = nullEstErr(sampleRange(1):sampleRange(2));
-else
-    measuredNullEst = nullEst;
-    measuredNullEstErr = nullEstErr;
-end
+measuredNullEst = nullEst;
+measuredNullEstErr = nullEstErr;
 clear nullEst nullEstErr
 
 
@@ -400,12 +404,11 @@ for curHop = 1:numHops
     fitOptions.FitUncertainty = fitUncertainties;
     fitOptions.MaxFunEvals = 200;
     %fitOptions.Scale = 1;
-%     fitOptions.LowerBound = [guessParams(1) -inf -inf -inf -inf -inf -inf -inf -inf -inf];
-%     fitOptions.UpperBound = [guessParams(1) inf inf inf inf inf inf inf inf inf];
-%     fitOptions.LowerBound = [-inf -inf 0.9 -0.1 -inf];
-%     fitOptions.UpperBound = [inf inf 1.1 0.1 inf];
-    %NB modelGuessParams = [deltaPhiMu, deltaPhiSig, IrMu, IrSig, astroNull];
-    
+
+
+    % fitOptions.LowerBound = [guessParams(1) -inf -inf -inf -inf -inf -inf -inf -inf -inf];
+    % fitOptions.UpperBound = [guessParams(1) inf inf inf inf inf inf inf inf inf];
+
     if performFit
         
         tic

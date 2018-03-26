@@ -20,7 +20,7 @@ interpFactor = 10;
 smoothAmt = 10;
 
 % TEST using true antinull as peakest
-useAntinull = false;
+useAntinull = true;
 
 global NSCPDFs
 histNBins = single(length(histEdgesSpecify) - 1);

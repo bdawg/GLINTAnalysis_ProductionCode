@@ -5,16 +5,16 @@ addpath('/Users/bnorris/code/GLINT/fitChiSquare') %For the fitchisq code
 addpath('fitChiSquare') %For the fitchisq code
 
 dataDir='..\GLINT_BinnedSaved\2017DecLabTests\';
-dataFileName = 'BinnedData_20171211T152646-20171211T153059_binsize100_peakEstBinSize100_NSC_peakest2'
-dataFileName = 'BinnedData_20171212T165556-20171212T170301_binsize100_peakEstBinSize100_NSC'
-fitSaveFileName = 'fittedParams_tmp';
+dataFileName = 'BinnedData_20171201T163009-20171201T163257_binsize100_peakEstBinSize100_NSC_1000bins';
+
+fitSaveFileName = 'fittedParams_20171201T163009-20171201T163257_fit01';
 % fitSaveFileName = 'fittedParams_lab20603-4-200nm_200bins';
 
 global nSamps nLoops histEdgesSpecify guessParams gpuMode NSCPDFs
 
 
 % Basin hopping
-numHops = 1;
+numHops = 100;
 hopSigmas = [0.1 1 0.01 0.1 1 0.01 0.01 0.01 0.01 0.01];
 % hopSigmas = hopSigmas*10
 hopSigmas = hopSigmas/2
@@ -24,12 +24,12 @@ relStepSigma = 1; %finDiffRelStep scales as 10^N(0,relStepSigma);
 
 
 fitAll = false; % false to just fit the 5 free params
-performFit = false;
+performFit = true;
 fitUncertainties = false;
 ignoreErrors = false;
 figNum = 1
 
-histPlotYlim = [0, 10]; %For plotting
+histPlotYlim = [0, inf]; %For plotting
 
 % Use NSC? If false, use ASC.
 useNSC = true;
@@ -46,22 +46,17 @@ nSamps = 2^24;
 nLoops=1;%8;%16;%256
 nSamps = 2^16;%2^24;
 
-nLoops=128;
+nLoops=32;%128;
 nSamps = 2^24;
-% nLoops=32;%128;
+% nLoops=1;%128;
 % nSamps = 2^24;
-nLoops=1;%128;
-nSamps = 2^24;
 
 % Restrict fitting to a smaller domain (e.g. to exclude long tail of zeros)
 restrictedFittingDomain = [];
 % restrictedFittingDomain = [-1., 1.2];
 restrictedFittingDomain = [-0.2, 1.2];
 % restrictedFittingDomain = [-0.5, 2];
-
-% Only use a sub-range of samples
-sampleRange = [];
-% sampleRange = [1, 1e5]
+restrictedFittingDomain = [0, 0.4]
 
 % Set up pdf measurement options
 estimateHistErrors = true; % If true, use the Bernoulli RV method
@@ -128,11 +123,11 @@ IrSig = 0;
 deltaPhiMu = 0.1;
 deltaPhiSig = 1;
 astroNull = 0.01;
-% IrMu = 0.9;
-% IrSig = 0.1;
+IrMu = 0.9;
+IrSig = 0.1;
 
-% astroNull = 0.1; % Good for polychromatic
-% deltaPhiSig = 0.4
+astroNull = 0.3; % Good for polychromatic
+deltaPhiSig = 0.1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 totsamps = nSamps * nLoops;
 disp(['Total samps: ' num2str(totsamps, '%.2g')])
@@ -156,13 +151,8 @@ end
 nullEstBinCents = binCents;
 nullEstPDFValsErr = zeros(1,length(nullEstPDFVals));
 
-if ~isempty(sampleRange)
-    measuredNullEst = nullEst(sampleRange(1):sampleRange(2));
-    measuredNullEstErr = nullEstErr(sampleRange(1):sampleRange(2));
-else
-    measuredNullEst = nullEst;
-    measuredNullEstErr = nullEstErr;
-end
+measuredNullEst = nullEst;
+measuredNullEstErr = nullEstErr;
 clear nullEst nullEstErr
 
 
@@ -400,12 +390,11 @@ for curHop = 1:numHops
     fitOptions.FitUncertainty = fitUncertainties;
     fitOptions.MaxFunEvals = 200;
     %fitOptions.Scale = 1;
-%     fitOptions.LowerBound = [guessParams(1) -inf -inf -inf -inf -inf -inf -inf -inf -inf];
-%     fitOptions.UpperBound = [guessParams(1) inf inf inf inf inf inf inf inf inf];
-%     fitOptions.LowerBound = [-inf -inf 0.9 -0.1 -inf];
-%     fitOptions.UpperBound = [inf inf 1.1 0.1 inf];
-    %NB modelGuessParams = [deltaPhiMu, deltaPhiSig, IrMu, IrSig, astroNull];
-    
+
+
+    % fitOptions.LowerBound = [guessParams(1) -inf -inf -inf -inf -inf -inf -inf -inf -inf];
+    % fitOptions.UpperBound = [guessParams(1) inf inf inf inf inf inf inf inf inf];
+
     if performFit
         
         tic

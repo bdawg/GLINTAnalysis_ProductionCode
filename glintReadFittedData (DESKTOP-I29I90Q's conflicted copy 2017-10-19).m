@@ -2,28 +2,39 @@ clear all
 
 set(0,'DefaultAxesColorOrder', hot)
 
-dataDir = './';
-inFileName = 'fittedParams_tmp';
-% inFileName = 'fittedParams_BinnedData_20171212T134349-20171212T135054_1e5samps_peakest2_2000bins_UseAntinullOn'
-inFileName = 'fittedParams_20171212T134349-20171212T135054_peakest2_2000bins_UseAntinullOn'
-inFileName = 'fittedParams_BinnedData_20171212T134349-20171212T135054_1e5samps_peakest2_2000bins_UseAntinullOn'
-             
+% dataDir = './fittedParamFiles/';
+% %inFileName = 'fittedParams_Vega_01062016_100hops.mat';
+% %inFileName = 'fittedParams_Labtest200nm_100Hops_01062016';
+% inFileName = 'fittedParams_alfBoo_29052016_100hops';
+% %inFileName = 'fittedParams_Labtest13_600nmWF_NoVibr_MaybeSat_runningcopy';
+% inFileName = 'fittedParams_alfHer_96hops';
+% inFileName = 'fittedParams_Labtest5_400nmWF_NoVibr'
+
+% dataDir = './';
+% inFileName = 'fittedParams_wip'
+
+dataDir = './fittedParamsFiles/';
+inFileName = 'fittedParams_fittedParams_fittedParams_chiCyg-SubJun2017_ERRORS_3BestFiles';
+% inFileName = 'fittedParams_omiCet_subset1_SubNov2016_ERRORS_INPROGRESS';
+% inFileName = 'fittedParams_fittedParams_alfTau_Everything_ERRORS-BetterFit_SubNov2016'
+inFileName = 'fittedParams_BinnedData_chiCyg_sub-subsetSWAPPED-SubAug2016'
+% 
+% dataDir = './fittedParamsFiles/old/';
+% inFileName = 'fittedParams_Labtest200nm_100Hops_01062016';
+
 chisqCutoff = inf;
+%chisqCutoff = 10.3;
 
 plotBest = true; % Make a nice plot of the best fit model
 plotBestErrs = true; %Plot error bars in data for the best fit plot?
-forceBestIter = [3]; %[22]; %18,22,49,83,96 Empty array to actually use best chisq iter
+forceBestIter = []; %[22]; %18,22,49,83,96 Empty array to actually use best chisq iter
 showParamErrs = true; %%true;
 annotFontSize = 12;%10; %12
 axisFontSize = 16;%12; %16
 anDimOffset = [0 0 0 0]; %[x y w h], added to default posn
 % anDimOffset = [0.045 0 0 0]
 
-xPlotRange = [-inf, inf];
-% xPlotRange = [-0.2, 1.2];
-% xPlotRange = [-0.6, 1.2];
-
-% iterRange = [1 1];
+iterRange = [1 1];
 % iterRange = [1 45];
 iterRange = [1 100];
 %maxY = 3;
@@ -31,15 +42,13 @@ ignoreEmptyIters = true;
 
 % When calculating param sd, ignore ones with chisq > this
 % Set to 0 to not ignore anything
-chisqOutlierLimit = 0;
-chisqOutlierLimit = 50;
+chisqOutlierLimit = 5;
+% chisqOutlierLimit = 0;
 
 paramSelect = [1 2 5 6 10];
 nullParamSelect = 10;
 
-doExclude = true;
-
-useSavedModelVals = true; % If true, settings below do nothing
+useSavedModelVals = true;
 nLoops=16;
 nSamps = 2^16;
 nLoops=32;
@@ -55,29 +64,6 @@ load([dataDir inFileName]);
 % histBinSize = (maxXVal-minXVal)/(histNBins);
 % histEdgesSpecify = minXVal:histBinSize:maxXVal;
 % binWidth = binCents(2) - binCents(1);
-
-if doExclude
-    disp('EXCLUDING specified iteration[s]...')
-    
-%     % Condition: exclude where chisq < chisqCut
-%     chisqCut = 50;
-%     keepInds = find(allReducedChi2 < chisqCut);
-
-    % Condition: Ir_mu must be between a certain ange:
-    Ir_muRange = [0.9, 1.1];
-    selInd = 5;
-    keepInds = find( (allFittedParams(:, selInd) > Ir_muRange(1)) ... 
-        & (allFittedParams(:, selInd) < Ir_muRange(2)) );
- 
-    allFailedIters = allFailedIters(keepInds, :);
-    allFinDiffRelSteps = allFinDiffRelSteps(keepInds, :);
-    allFittedCurves = allFittedCurves(keepInds, :);
-    allFittedParams = allFittedParams(keepInds, :);
-    allGuessParams = allGuessParams(keepInds, :);
-    allParamsLL = allParamsLL(keepInds, :);
-    allParamsUL = allParamsUL(keepInds, :);
-    allReducedChi2 = allReducedChi2(keepInds, :);
-end
 
 
 figure(1)
@@ -127,7 +113,7 @@ for k = iterRange(1):iterRange(2)
         figure(1)
         hold on
         p=plot(binCents, curModelVals, 'b-');
-        p.Color(4)=0.5;
+        p.Color(4)=0.1;
         hold off
         %axis([0 1.2 0 5])
         
@@ -143,7 +129,7 @@ for k = iterRange(1):iterRange(2)
         hold off
         
     end
-    pause(0.1)
+    %pause(0.1)
 end
 
 figure(1)
@@ -210,7 +196,7 @@ if plotBest
         plotBestIter = bestIter;
     end
     
-    f4=figure(13);
+    f4=figure(14);
     clf()
     hold on
     if plotBestErrs
@@ -230,8 +216,7 @@ if plotBest
     ylabel('Normalised frequency')
     legend('Measured distribution', 'Model distribution');  
     set(gca,'FontSize',axisFontSize)
-%     axis([-inf inf 0 inf])
-    axis([xPlotRange(1) xPlotRange(2) 0 inf])
+    axis([-inf inf 0 inf])
     
     % Assemble text for annotation   
     %NB: guessParams = [deltaPhiMu, deltaPhiSig, deltaIMu, deltaISig, ...

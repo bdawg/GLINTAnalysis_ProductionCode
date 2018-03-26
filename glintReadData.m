@@ -1,4 +1,4 @@
-clear all
+% clear all
 
 filePrefix = 'acqdata_';
 fileExtn = '.bin';
@@ -8,10 +8,10 @@ manualDarkSpecify = [];
 %manualDarkSpecify = [-9.726342e-05, -3.876065e-04, -5.243951e-04, -2.450550e-04]
 
 darkFilesSpecify = {}; % A list of timestrings that correspond to dark files
-interpolateDarks = false; %Interpolate between dark files so bias changes over time
+interpolateDarks = false %Interpolate between dark files so bias changes over time
 
 skipRead = false; % If true, just restore the following binned file:
-restoreFileName = 'BinnedData_alfBoo_ALLFILES_20160319T015746-20160319T034741_binsize100';
+% restoreFileName = 'BinnedData_alfBoo_ALLFILES_20160319T015746-20160319T034741_binsize100';
 
 gain = 1; % V/W. Set to 1 to keep units as Volts.
 subtBias = true;
@@ -44,7 +44,7 @@ xr = [-inf, inf];
 xr = [0, 1.0];
 
 yr = [-1e-3, 4e-3];
-%yr = [-inf, inf];
+yr = [-inf, inf];
 
 byr = yr;
 %byr = [-1e-3,1e-3]; %yrange for Binned data plots
@@ -52,36 +52,55 @@ byr = yr;
 
 histNBins=200; %Number of bins for the histogram
 minXVal = -1.2;
-%minXVal = -0.2;
+% minXVal = -0.2;
 maxXVal = 1.2;
 histAxes = [-0.2, 1.2];
-
+% histAxes = [-0.6, 1.2];
 
 
 doHistErrors = false; %If false, use histcounts to do it quickly.
 plotDark = true; % Set to plot the signal in the dark files
 useCustomFilenameFormat = false;
 
-saveBinnedData = true;
+saveBinnedData = true
 specialFName = '';
-% specialFName = '_maxHist5'
+% specialFName = '_2000bins'
+% specialFName = '_fiddling'
 
 excludeString = [];
 
 %%% Data set:
 
-% %%%%%%%%%%%%%%%% Subaru August 2016 %%%%%%%%%%%%%%%%%
-filePath = '/Volumes/pendragon1/snert/tempFromRDN/GLINT_201608_Subaru/'
-% Vega 20160812
-startTimeString1 = '20160812T221833';
-endTimeString1 = '20160812T225417'; %Everything
-% startTimeString1 = '20160812T221914'; %Nice subset
-% endTimeString1 = '20160812T223026'; %Nice subset
+% % %%%%%%%%%%%%%%%% Subaru August 2016 %%%%%%%%%%%%%%%%%
+% filePath = '/Volumes/pendragon1/snert/tempFromRDN/GLINT_201608_Subaru/'
+% % Vega 20160812
+% startTimeString1 = '20160812T221833';
+% endTimeString1 = '20160812T225417'; %Everything
+% % startTimeString1 = '20160812T221914'; %Nice subset
+% % endTimeString1 = '20160812T223026'; %Nice subset
 
 
-saveDir = [filePath 'BinnedSaved/'];
+% saveDir = [filePath 'BinnedSaved/'];
 saveDir = '../GLINT_BinnedSaved/';
+saveDir = '../GLINT_BinnedSaved/2017DecLabTests/';
+% saveDir = '../GLINT_BinnedSaved/2016MarchNSCResaved/'
 
+enableOverides = false;
+enableOverides = true
+if enableOverides
+    disp('WARNING: manual overides set in glintReadData.m')
+    %%% Overrides:
+%      useCustomFilenameFormat = true;
+         histNBins=2000; %Number of bins for the histogram
+%          histNBins=1000; %Number of bins for the histogram
+%         minXVal = -0.2
+%         maxXVal = 1.2
+
+%         minXVal = 0.2;
+%         maxXVal = 0.4;
+     peakEstMode = 2
+%      specialFName = '_peakest2'
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
